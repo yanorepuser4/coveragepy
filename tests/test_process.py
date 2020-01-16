@@ -983,6 +983,14 @@ class EnvironmentTest(CoverageTest):
         actual = self.run_command("python {} run run_me.py".format(cov_main))
         self.assert_tryexecfile_output(expected, actual)
 
+    def test_dashm_coverage_is_like_python(self):
+        # https://github.com/nedbat/coveragepy/issues/919
+        with open(TRY_EXECFILE) as f:
+            self.make_file("else/where/run_me.py", f.read())
+        expected = self.run_command("python else/where/run_me.py")
+        actual = self.run_command("python -m coverage run else/where/run_me.py")
+        self.assert_tryexecfile_output(expected, actual)
+
     def test_coverage_custom_script(self):
         # https://github.com/nedbat/coveragepy/issues/678
         # If sys.path[0] isn't the Python default, then coverage.py won't
