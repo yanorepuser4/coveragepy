@@ -262,8 +262,8 @@ class CoverageData(SimpleReprMixin):
 
     def _open_db(self):
         """Open an existing db file, and read its metadata."""
-        if self._debug.should("dataio"):
-            self._debug.write(f"Opening data file {self._filename!r}")
+        # if self._debug.should("dataio"):
+        #     self._debug.write(f"Opening data file {self._filename!r}")
         self._dbs[threading.get_ident()] = SqliteDb(self._filename, self._debug)
         self._read_db()
 
@@ -298,18 +298,30 @@ class CoverageData(SimpleReprMixin):
 
     def _init_db(self, db):
         """Write the initial contents of the database."""
+        from coverage.debug import short_stack
         if self._debug.should("dataio"):
             self._debug.write(f"Initing data file {self._filename!r}")
-        db.executescript(SCHEMA)
-        db.execute("insert into coverage_schema (version) values (?)", (SCHEMA_VERSION,))
-        db.executemany(
-            "insert or ignore into meta (key, value) values (?, ?)",
-            [
-                ("sys_argv", str(getattr(sys, "argv", None))),
-                ("version", __version__),
-                ("when", datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
-            ]
-        )
+            self._debug.write(f"from:\n{short_stack()}")
+        try:
+            db.executescript(SCHEMA)
+            #self._debug.write(f"Init1 data file {self._filename!r}")
+            db.execute("insert into coverage_schema (version) values (?)", (SCHEMA_VERSION,))
+            #self._debug.write(f"Init2 data file {self._filename!r}")
+            db.executemany(
+                "insert or ignore into meta (key, value) values (?, ?)",
+                [
+                    ("sys_argv", str(getattr(sys, "argv", None))),
+                    ("version", __version__),
+                    ("when", datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
+                ]
+            )
+            #self._debug.write(f"Init3 data file {self._filename!r}")
+        except:
+            #if self._debug.should("dataio"):
+            self._debug.write(f"Couldn't init data file {self._filename!r}")
+            raise
+        if self._debug.should("dataio"):
+            self._debug.write(f"Inited data file {self._filename!r}")
 
     def _connect(self):
         """Get the SqliteDb object to use."""
@@ -345,8 +357,8 @@ class CoverageData(SimpleReprMixin):
         .. versionadded:: 5.0
 
         """
-        if self._debug.should("dataio"):
-            self._debug.write(f"Dumping data from data file {self._filename!r}")
+        # if self._debug.should("dataio"):
+        #     self._debug.write(f"Dumping data from data file {self._filename!r}")
         with self._connect() as con:
             script = con.dump()
             return b"z" + zlib.compress(script.encode("utf-8"))
@@ -367,8 +379,8 @@ class CoverageData(SimpleReprMixin):
         .. versionadded:: 5.0
 
         """
-        if self._debug.should("dataio"):
-            self._debug.write(f"Loading data into data file {self._filename!r}")
+        # if self._debug.should("dataio"):
+        #     self._debug.write(f"Loading data into data file {self._filename!r}")
         if data[:1] != b"z":
             raise DataError(
                 f"Unrecognized serialization: {data[:40]!r} (head of {len(data)} bytes)"
@@ -764,17 +776,21 @@ class CoverageData(SimpleReprMixin):
         self._reset()
         if self._no_disk:
             return
-        if self._debug.should("dataio"):
-            self._debug.write(f"Erasing data file {self._filename!r}")
+        # if self._debug.should("dataio"):
+        #     self._debug.write(f"Erasing data file {self._filename!r}")
         file_be_gone(self._filename)
+        if self._debug.should("dataio"):
+            self._debug.write(f"Erased data file {self._filename!r}")
         if parallel:
             data_dir, local = os.path.split(self._filename)
             localdot = local + ".*"
             pattern = os.path.join(os.path.abspath(data_dir), localdot)
             for filename in glob.glob(pattern):
-                if self._debug.should("dataio"):
-                    self._debug.write(f"Erasing parallel data file {filename!r}")
+                # if self._debug.should("dataio"):
+                #     self._debug.write(f"Erasing parallel data file {filename!r}")
                 file_be_gone(filename)
+                # if self._debug.should("dataio"):
+                #     self._debug.write(f"Erased parallel data file {filename!r}")
 
     def read(self):
         """Start using an existing data file."""
@@ -1160,7 +1176,14 @@ class SqliteDb(SimpleReprMixin):
             self.debug.write("Executing script with {} chars: {}".format(
                 len(script), clipped_repr(script, 100),
             ))
-        self.con.executescript(script)
+        try:
+            self.con.executescript(script)
+        except:
+            if self.debug:
+                self.debug.write("Couldn't execute script")
+            raise
+        if self.debug:
+            self.debug.write("Executed script with {} chars".format(len(script)))
 
     def dump(self):
         """Return a multi-line string, the SQL dump of the database."""

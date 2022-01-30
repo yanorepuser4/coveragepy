@@ -383,6 +383,8 @@ class Coverage:
         if self._debug is not None and self._debug.should('pid'):
             msg = f"[{os.getpid()}] {msg}"
         warnings.warn(msg, category=CoverageWarning, stacklevel=2)
+        if self._debug is not None:
+            self._debug.write(f"Warning: {msg}\n{short_stack()}")
 
         if once:
             self._no_warn_slugs.append(slug)
