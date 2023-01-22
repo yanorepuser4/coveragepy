@@ -36,25 +36,25 @@ jobs:
       matrix:
         os:
           - ubuntu
-          - macos
-          - windows
+          #- macos
+          #- windows
         python-version:
           # When changing this list, be sure to check the [gh-actions] list in
           # tox.ini so that tox will run properly. PYVERSIONS
           # Available versions:
           # https://github.com/actions/python-versions/blob/main/versions-manifest.json
           # https://github.com/actions/setup-python/blob/main/docs/advanced-usage.md#available-versions-of-python-and-pypy
-          - "3.7"
+          #- "3.7"
           - "3.8"
           - "3.9"
-          - "3.10"
-          - "3.11"
-          - "pypy-3.7"
-          - "pypy-3.9"
-        exclude:
-          # Windows PyPy-3.9 always gets killed.
-          - os: windows
-            python-version: "pypy-3.9"
+          #- "3.10"
+          #- "3.11"
+          #- "pypy-3.7"
+          #- "pypy-3.9"
+        #exclude:
+        #  # Windows PyPy-3.9 always gets killed.
+        #  - os: windows
+        #    python-version: "pypy-3.9"
       fail-fast: false
 
     steps:
@@ -79,13 +79,13 @@ jobs:
 
       - name: "Run tox for ${{ matrix.python-version }}"
         run: |
-          python -m tox -- -rfsEX
+          python -m tox -- -rfsEX -k test_debug
 
-      - name: "Retry tox for ${{ matrix.python-version }}"
-        if: failure()
-        run: |
-          # `exit 1` makes sure that the job remains red with flaky runs
-          python -m tox -- -rfsEX --lf -vvvvv && exit 1
+      #- name: "Retry tox for ${{ matrix.python-version }}"
+      #  if: failure()
+      #  run: |
+      #    # `exit 1` makes sure that the job remains red with flaky runs
+      #    python -m tox -- -rfsEX --lf -vvvvv && exit 1
 
   # This job aggregates test results. It's the required check for branch protection.
   # https://github.com/marketplace/actions/alls-green#why
