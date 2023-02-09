@@ -64,7 +64,12 @@ def get_python_source(filename: str) -> str:
 
     # Replace \f because of http://bugs.python.org/issue19035
     source_bytes = source_bytes.replace(b'\f', b' ')
-    source = source_bytes.decode(source_encoding(source_bytes), "replace")
+    try:
+        source = source_bytes.decode(source_encoding(source_bytes), "replace")
+    except:
+        print(f"Failed on {filename!r}")
+        print(f"Source bytes ({len(source_bytes)} total): {source_bytes[:80]!r}")
+        raise
 
     # Python code should always end with a line with a newline.
     if source and source[-1] != '\n':
