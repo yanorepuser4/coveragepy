@@ -6,6 +6,10 @@
 import functools
 import sys
 
+from types import CodeType, FrameType
+
+from coverage.debug import short_filename, short_stack
+
 print(sys.version)
 the_program = sys.argv[1]
 
@@ -27,8 +31,40 @@ def bytes_to_lines(code):
     return b2l
 
 
+def arg_repr(arg):
+    """Make a customized repr for logged values."""
+    if isinstance(arg, CodeType):
+        return (
+            f"<code @{id(arg):#x}"
+            + f" name={arg.co_name},"
+            + f" file={short_filename(arg.co_filename)!r}#{arg.co_firstlineno}>"
+        )
+    return repr(arg)
+
+
+def handler(*names):
+    def _decorator(func):
+        @functools.wraps(func)
+        def _wrapped(*args):
+            args_reprs = []
+            code = None
+            for name, arg in zip(names, args):
+                if name:
+                    if name == "code":
+                        code = arg
+                    args_reprs.append(f"{name}={arg_repr(arg)}")
+                    if name.endswith("@") and code is not None:
+                        line = bytes_to_lines(code)[arg]
+                        args_reprs[-1] += f"#{line}"
+            name = func.__name__.removeprefix("sysmon_")
+            print(f"{name}({', '.join(args_reprs)})")
+            return func(*args)
+        return _wrapped
+    return _decorator
+
+
+@handler("code", "@")
 def sysmon_py_start(code, instruction_offset):
-    print(f"PY_START: {code.co_filename}@{instruction_offset}")
     sys.monitoring.set_local_events(
         my_id,
         code,
@@ -36,41 +72,28 @@ def sysmon_py_start(code, instruction_offset):
     )
 
 
+@handler("code", "@")
 def sysmon_py_resume(code, instruction_offset):
-    b2l = bytes_to_lines(code)
-    print(
-        f"PY_RESUME: {code.co_filename}@{instruction_offset}, "
-        + f"{b2l[instruction_offset]}"
-    )
+    ...
 
-
+@handler("code", "@", None)
 def sysmon_py_return(code, instruction_offset, retval):
-    b2l = bytes_to_lines(code)
-    print(
-        f"PY_RETURN: {code.co_filename}@{instruction_offset}, "
-        + f"{b2l[instruction_offset]}"
-    )
-
-
-def sysmon_line(code, line_number):
-    print(f"LINE: {code.co_filename}@{line_number}")
     return sys.monitoring.DISABLE
 
 
+@handler("code", "#")
+def sysmon_line(code, line_number):
+    return sys.monitoring.DISABLE
+
+
+@handler("code", "src@", "dst@")
 def sysmon_branch(code, instruction_offset, destination_offset):
-    b2l = bytes_to_lines(code)
-    print(
-        f"BRANCH: {code.co_filename}@{instruction_offset}->{destination_offset}, "
-        + f"{b2l[instruction_offset]}->{b2l[destination_offset]}"
-    )
+    ... #return sys.monitoring.DISABLE
 
 
+@handler("code", "src@", "dst@")
 def sysmon_jump(code, instruction_offset, destination_offset):
-    b2l = bytes_to_lines(code)
-    print(
-        f"JUMP: {code.co_filename}@{instruction_offset}->{destination_offset}, "
-        + f"{b2l[instruction_offset]}->{b2l[destination_offset]}"
-    )
+    return sys.monitoring.DISABLE
 
 
 sys.monitoring.set_events(
