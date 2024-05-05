@@ -87,7 +87,7 @@ if 0:
             Coverage("732", "coverage==7.3.2"),
             CoverageSource(
                 slug="sysmon",
-                directory="/Users/nbatchelder/coverage/trunk",
+                directory="~/coverage/trunk",
                 env_vars={"COVERAGE_CORE": "sysmon"},
             ),
         ],
@@ -111,10 +111,10 @@ if 1:
         ],
         cov_versions=[
             NoCoverage("nocov"),
-            Coverage("732", "coverage==7.3.2"),
+            Coverage("pip", "coverage==7.5.1"),
             CoverageSource(
                 slug="sysmon",
-                directory="/Users/nbatchelder/coverage/trunk",
+                directory="~/coverage/trunk",
                 env_vars={"COVERAGE_CORE": "sysmon"},
             ),
         ],
@@ -125,7 +125,7 @@ if 1:
         rows=["pyver", "proj"],
         column="cov",
         ratios=[
-            (f"732%", "732", "nocov"),
+            (f"pip%", "pip", "nocov"),
             (f"sysmon%", "sysmon", "nocov"),
         ],
     )
